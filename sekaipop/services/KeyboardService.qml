@@ -15,7 +15,7 @@ import Quickshell.Hyprland
 // there is nothing to poll: refresh() stays only so QuickSource's calls to it
 // keep working.
 //
-// Needs `wtype` (Wayland virtual-keyboard typing; `pacman -S wtype`). If it is
+// Needs `wtype` (Wayland virtual-keyboard typing; `sudo dnf install wtype`). If it is
 // missing, opening the keyboard shows a notification instead.
 //
 //   qs -c sekaipop ipc call keyboard toggle | show | hide
@@ -92,7 +92,7 @@ Singleton {
                 root.open = true
             } else {
                 Quickshell.execDetached(["notify-send", "-a", "Shell", "-i", "material:error",
-                    "On-screen keyboard", "wtype is not installed, so the keyboard cannot type. Install it (pacman -S wtype) and try again."])
+                    "On-screen keyboard", "wtype is not installed, so the keyboard cannot type. Install it (sudo dnf install wtype) and try again."])
             }
         }
     }

@@ -13,5 +13,5 @@ for src in *.vert *.frag; do
         echo "missing: $src.qsb"; bad=1
     fi
 done
-if [ "$bad" = 0 ]; then echo "every shader source has a .qsb"; else echo; echo "run: ./shaders/compile-shaders.sh   (needs qsb: pacman -S qt6-shadertools)"; fi
+if [ "$bad" = 0 ]; then echo "every shader source has a .qsb"; else echo; echo "run: ./shaders/compile-shaders.sh   (needs qsb: sudo dnf install qt6-qtshadertools)"; fi
 exit $bad

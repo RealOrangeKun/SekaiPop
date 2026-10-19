@@ -4,13 +4,13 @@ import Quickshell
 import Quickshell.Io
 import qs.modules.common
 
-// Pending package updates (Arch): a count for the bar's badge
-// (UpdatesBadge.qml), looked up by scripts/system/pkg-updates.sh with `checkupdates`
-// (pacman-contrib; needs no root) and, when you ask for it, the AUR through
-// paru or yay.
+// Pending package updates (Fedora): a count for the bar's badge
+// (UpdatesBadge.qml), looked up by scripts/system/pkg-updates.sh with
+// `dnf check-update` (needs no root) and, when you ask for it, Flatpak.
+// (The aur* names are kept from upstream; on Fedora they hold Flatpak updates.)
 //
 //   repoCount, aurCount, total   what is waiting
-//   packages                     ["name 1.0 -> 1.1", ...] (the first few, repo then AUR)
+//   packages                     ["name 1.0 -> 1.1", ...] (the first few, repo then Flatpak)
 //   status                       "idle" | "checking" | "ok" | "nocmd" | "error"
 //   nudging                      total >= the "updates.nudgeAt" setting
 //
@@ -66,10 +66,10 @@ Singleton {
         checker.exec(["sh", root.script, "check", SettingsService.flag("updates.aur") ? "1" : "0"])
     }
 
-    // "3 repo · 1 AUR" for the tag and the Settings page.
+    // "3 repo · 1 Flatpak" for the tag and the Settings page.
     readonly property string breakdown: {
         if (root.status === "nocmd")
-            return "checkupdates not found (install pacman-contrib)"
+            return "dnf not found"
         if (root.status === "error")
             return "couldn't check for updates"
         if (root.status === "idle" || (root.status === "checking" && root.checkedAt === 0))
@@ -78,7 +78,7 @@ Singleton {
             return "up to date"
         const parts = [root.repoCount + " repo"]
         if (root.aurCount > 0)
-            parts.push(root.aurCount + " AUR")
+            parts.push(root.aurCount + " Flatpak")
         return parts.join(" · ")
     }
 
@@ -155,10 +155,8 @@ Singleton {
 
     // ===== running the update =====
     readonly property string updateScript:
-        "checkupdates 2>/dev/null; echo; "
-        + "if command -v paru >/dev/null 2>&1; then paru; "
-        + "elif command -v yay >/dev/null 2>&1; then yay; "
-        + "else sudo pacman -Syu; fi; "
+        "sudo dnf upgrade --refresh; "
+        + "if command -v flatpak >/dev/null 2>&1; then echo; flatpak update; fi; "
         + "echo; printf 'Press Enter to close '; read _"
 
     function terminalCommand() {

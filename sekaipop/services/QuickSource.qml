@@ -885,7 +885,7 @@ Scope {
 
     // Where to get it, shown when the tile is clicked without warp-cli.
     readonly property string warpInstallHint:
-        "warp-cli isn't installed. On Arch: yay -S cloudflare-warp-bin, then sudo systemctl enable --now warp-svc. "
+        "warp-cli isn't installed. On Fedora: add Cloudflare's repo (pkg.cloudflareclient.com), sudo dnf install cloudflare-warp, then sudo systemctl enable --now warp-svc. "
         + "Other distros: https://developers.cloudflare.com/warp-client/get-started/linux/"
 
     // `command -v warp-cli`: exit 0 = installed. Run once at the first poll,

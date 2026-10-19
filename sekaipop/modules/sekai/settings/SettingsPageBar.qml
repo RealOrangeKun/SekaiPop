@@ -141,8 +141,8 @@ SettingsPage {
 
         SettingToggle {
             icon: "deployed_code"
-            label: "Count AUR updates"
-            detail: "paru or yay"
+            label: "Count Flatpak updates"
+            detail: "flatpak"
             checked: SettingsService.flag("updates.aur")
             onToggled: {
                 SettingsService.toggle("updates.aur")

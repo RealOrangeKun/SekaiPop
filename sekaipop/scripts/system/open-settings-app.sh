@@ -43,7 +43,7 @@ case "$kind" in
         have nm-connection-editor && exec nm-connection-editor
         have gnome-control-center && exec gnome-control-center wifi
         have nmtui && term nmtui
-        say "No network settings app found" "Install plasma-nm and kde-cli-tools (pacman -S plasma-nm kde-cli-tools)."
+        say "No network settings app found" "Install plasma-nm and kde-cli-tools (sudo dnf install plasma-nm kde-cli-tools)."
         ;;
     bluetooth)
         have blueman-manager && exec blueman-manager
@@ -52,7 +52,7 @@ case "$kind" in
         have gnome-control-center && exec gnome-control-center bluetooth
         have bluetui && term bluetui
         have bluetoothctl && term bluetoothctl
-        say "No Bluetooth settings app found" "Install blueman (pacman -S blueman)."
+        say "No Bluetooth settings app found" "Install blueman (sudo dnf install blueman)."
         ;;
     *)
         echo "usage: $0 wifi|bluetooth" >&2

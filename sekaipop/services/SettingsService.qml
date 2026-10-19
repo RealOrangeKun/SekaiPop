@@ -112,7 +112,7 @@ Singleton {
         "lock.lyrics": false,
         // ===== System updates =====
         "updates.nudgeAt": 30,          // from this many updates the badge asks for attention
-        "updates.aur": true,            // count AUR updates too (yay / paru, when installed)
+        "updates.aur": true,            // count Flatpak updates too (when flatpak is installed)
         "updates.showZero": false,      // keep the badge on the bar when nothing is pending
         "updates.intervalMin": 30,      // how often to look (minutes)
         "updates.terminal": "kitty",    // what a click on the badge opens: kitty | foot | alacritty

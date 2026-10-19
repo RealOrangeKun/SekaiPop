@@ -105,7 +105,7 @@ apply_managed() {
     { echo "commit=$commit"; echo "repo=$repo"; echo "ref=$ref"; } > "$stage/.source"
 
     # Qt older than 6.12 cannot read the shipped .qsb shaders: build them again, as install.sh does.
-    qt=$(pacman -Q qt6-base 2>/dev/null | awk '{print $2}' | grep -oE '^[0-9]+\.[0-9]+')
+    qt=$(rpm -q --qf '%{VERSION}\n' qt6-qtbase 2>/dev/null | grep -oE '^[0-9]+\.[0-9]+')
     if [ -n "$qt" ] && [ "$(printf '%s\n6.12\n' "$qt" | sort -V | head -n 1)" != 6.12 ] && [ -f "$stage/shaders/compile-shaders.sh" ]; then
         bash "$stage/shaders/compile-shaders.sh" >/dev/null 2>&1 \
             || { rm -rf "$stage"; echo "the shaders didn't build (needs qt6-shadertools)"; return 1; }
