@@ -11,7 +11,8 @@
 #         3 = optional
 # Exit code: 0 = all Tier 1 present, 1 = something in Tier 1 is missing.
 #
-# Package names are for Arch / AUR. On other distros read them as hints.
+# Package names are for Fedora. Hyprland, quickshell, matugen and the hypr* tools come from the
+# lionheartp/Hyprland COPR (sudo dnf copr enable lionheartp/Hyprland).
 
 set -u
 
@@ -45,7 +46,7 @@ declare -A MISS   # key "<tier>:<repo>" -> names joined with |
 section() { local n=$((UI_W - ${#1} - 5)); [ "$n" -lt 3 ] && n=3
     printf '\n%s%s%s %s%s%s %s%s%s\n' "$C" "$G_HR$G_HR" "$Z" "$B" "$1" "$Z" "$D" "$(rep "$G_HR" "$n")" "$Z"; }
 
-# record <tier> <label> <found 0/1> <pkg> <repo: pac|aur|manual> [note]
+# record <tier> <label> <found 0/1> <pkg> <repo: dnf|manual> [note]
 record() {
     local tier=$1 label=$2 found=$3 pkg=$4 repo=$5 note=${6:-}
     if [ "$found" = 1 ]; then
@@ -70,7 +71,7 @@ record() {
 add_pkg() {
     local tier=$1 pkg=$2 repo=$3 t k
     [ -z "$pkg" ] && return
-    case "$repo" in pac|aur) ;; *) repo=manual ;; esac
+    case "$repo" in dnf) ;; *) repo=manual ;; esac
     for t in 1 2 3; do
         k="$t:$repo"
         case "|${MISS[$k]:-}|" in *"|$pkg|"*) return ;; esac
@@ -81,7 +82,7 @@ add_pkg() {
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # cmd <tier> <command> <pkg> [repo] [note]
-cmd() { have "$2"; record "$1" "$2" $((! $? )) "$3" "${4:-pac}" "${5:-}"; }
+cmd() { have "$2"; record "$1" "$2" $((! $? )) "$3" "${4:-dnf}" "${5:-}"; }
 
 # any <tier> <label> <pkg> <repo> <cmd1> <cmd2> ...   (one of the commands is enough)
 any() {
@@ -107,7 +108,7 @@ QML_DIRS+=(/usr/lib/qt6/qml /usr/lib64/qt6/qml /usr/lib/x86_64-linux-gnu/qt6/qml
 qml() {
     local d found=0
     for d in "${QML_DIRS[@]}"; do [ -d "$d/$2" ] && { found=1; break; }; done
-    record "$1" "QML module $2" "$found" "$3" "${4:-pac}" "${5:-}"
+    record "$1" "QML module $2" "$found" "$3" "${4:-dnf}" "${5:-}"
 }
 
 # Directories where Qt looks for plugins
@@ -122,7 +123,7 @@ qtplugin() {
     for d in "${QT_PLUG_DIRS[@]}"; do
         for f in $d/$glob; do [ -e "$f" ] && { found=1; break 2; }; done
     done
-    record "$tier" "$label" "$found" "$pkg" pac "$note"
+    record "$tier" "$label" "$found" "$pkg" dnf "$note"
 }
 
 printf '\n  %s%s %sSekaiPop dependency check%s   %s(read-only, nothing is installed)%s\n' "$PK" "$G_NOTE" "$B" "$Z" "$D" "$Z"
@@ -134,18 +135,18 @@ if [ "$(id -u)" = 0 ]; then
     printf '  %s[warn]%s running as root; run this as your normal user\n' "$Y" "$Z"
 fi
 if [ -r /etc/os-release ]; then . /etc/os-release; printf '  %sdistro: %s%s\n' "$D" "${PRETTY_NAME:-unknown}" "$Z"; fi
-if ! have pacman; then
-    printf '  %s[note]%s no pacman found: package names below are Arch names, translate them for your distro\n' "$Y" "$Z"
+if ! have dnf; then
+    printf '  %s[note]%s no dnf found: package names below are Fedora names, translate them for your distro\n' "$Y" "$Z"
 fi
-cmd 1 systemctl systemd pac "service checks and the power menu use it"
-cmd 1 sh dash pac
-cmd 1 bash bash pac
+cmd 1 systemctl systemd dnf "service checks and the power menu use it"
+cmd 1 sh dash dnf
+cmd 1 bash bash dnf
 
 # --------------------------------------------------------------------------
 section "Compositor"
 # --------------------------------------------------------------------------
-cmd 1 Hyprland hyprland pac
-cmd 1 hyprctl hyprland pac
+cmd 1 Hyprland hyprland dnf
+cmd 1 hyprctl hyprland dnf
 if have hyprctl && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
     v=$(hyprctl version 2>/dev/null | grep -oiE 'v?[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)
     printf '  %sHyprland running, version: %s%s\n' "$D" "${v:-unknown}" "$Z"
@@ -165,41 +166,41 @@ fi
 # --------------------------------------------------------------------------
 section "Quickshell and Qt 6"
 # --------------------------------------------------------------------------
-cmd 1 qs quickshell pac "also: quickshell"
-cmd 1 quickshell quickshell pac
+cmd 1 qs quickshell dnf "also: quickshell"
+cmd 1 quickshell quickshell dnf
 if have qs || have quickshell; then
     for m in Quickshell/Hyprland Quickshell/Wayland Quickshell/Io Quickshell/Widgets \
              Quickshell/Services/Pam Quickshell/Services/Polkit Quickshell/Services/Notifications \
              Quickshell/Services/UPower Quickshell/Services/Pipewire Quickshell/Services/Mpris \
              Quickshell/Services/SystemTray; do
-        qml 1 "$m" quickshell pac "your Quickshell build lacks this module"
+        qml 1 "$m" quickshell dnf "your Quickshell build lacks this module"
     done
 else
     printf '  %s(Quickshell module checks skipped until quickshell is installed)%s\n' "$D" "$Z"
 fi
-qml 1 QtMultimedia qt6-multimedia pac "video wallpaper"
-qml 1 QtQuick/Effects qt6-declarative pac "MultiEffect, Qt 6.5+"
-qml 1 QtQuick/Shapes qt6-declarative pac
-qml 1 Qt/labs/folderlistmodel qt6-declarative pac
+qml 1 QtMultimedia qt6-qtmultimedia dnf "video wallpaper"
+qml 1 QtQuick/Effects qt6-qtdeclarative dnf "MultiEffect, Qt 6.5+"
+qml 1 QtQuick/Shapes qt6-qtdeclarative dnf
+qml 1 Qt/labs/folderlistmodel qt6-qtdeclarative dnf
 QT_CHECKED=0
 for q in qmake6 qmake-qt6 qtpaths6; do
     if have "$q"; then
         qv=$("$q" -query QT_VERSION 2>/dev/null || "$q" --qt-version 2>/dev/null)
         if [ -n "$qv" ]; then
             if [ "$(printf '%s\n6.7.0\n' "$qv" | sort -V | head -n1)" = "6.7.0" ]; then
-                record 1 "Qt $qv (needs 6.7 or newer)" 1 qt6-base pac
+                record 1 "Qt $qv (needs 6.7 or newer)" 1 qt6-qtbase dnf
             else
-                record 1 "Qt $qv (needs 6.7 or newer)" 0 qt6-base pac "too old for variable font axes"
+                record 1 "Qt $qv (needs 6.7 or newer)" 0 qt6-qtbase dnf "too old for variable font axes"
             fi
             QT_CHECKED=1; break
         fi
     fi
 done
 [ "$QT_CHECKED" = 0 ] && printf '  %s(Qt version not checked: no qmake6/qtpaths6 found; Qt 6.7 or newer is needed)%s\n' "$D" "$Z"
-qtplugin 1 "imageformats/libqsvg.so" qt6-svg "Qt SVG plugin" "app icons from icon themes are SVG"
-qtplugin 2 "imageformats/libqwebp.so" qt6-imageformats "Qt image formats (webp)" "the rice accepts webp wallpapers"
-qtplugin 2 "platforms/*wayland*" qt6-wayland "Qt Wayland platform plugin"
-any 2 "qsb shader compiler (to rebuild shaders/*.qsb for your Qt)" qt6-shadertools pac qsb /usr/lib/qt6/bin/qsb
+qtplugin 1 "imageformats/libqsvg.so" qt6-qtsvg "Qt SVG plugin" "app icons from icon themes are SVG"
+qtplugin 2 "imageformats/libqwebp.so" qt6-qtimageformats "Qt image formats (webp)" "the rice accepts webp wallpapers"
+qtplugin 2 "platforms/*wayland*" qt6-qtwayland "Qt Wayland platform plugin"
+any 2 "qsb shader compiler (to rebuild shaders/*.qsb for your Qt)" qt6-qtshadertools dnf qsb qsb-qt6 /usr/lib64/qt6/bin/qsb
 
 # --------------------------------------------------------------------------
 section "Fonts (not bundled with the rice)"
@@ -207,99 +208,99 @@ section "Fonts (not bundled with the rice)"
 if have fc-list; then
     font 1 "Google Sans Flex" "Google Sans Flex (clone github.com/end-4/google-sans-flex into ~/.local/share/fonts, then fc-cache -f)" manual \
         "not in the repos"
-    font 1 "Material Symbols Rounded" ttf-material-symbols-variable aur
-    font 3 "Nerd Font" ttf-jetbrains-mono-nerd pac "fish prompt icons"
-    font 2 "emoji" noto-fonts-emoji pac "emoji picker"
+    font 1 "Material Symbols Rounded" "Material Symbols Rounded (MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf from github.com/google/material-design-icons/tree/master/variablefont into ~/.local/share/fonts, then fc-cache -f)" manual
+    font 3 "Nerd Font" "JetBrainsMono Nerd Font (github.com/ryanoasis/nerd-fonts/releases into ~/.local/share/fonts)" manual "fish prompt icons"
+    font 2 "emoji" google-noto-color-emoji-fonts dnf "emoji picker"
     if fc-list 2>/dev/null | grep -qiE 'Noto Sans|DejaVu Sans|Liberation Sans'; then
-        record 2 "a general-purpose UI font (Noto Sans / DejaVu / Liberation)" 1 noto-fonts pac
+        record 2 "a general-purpose UI font (Noto Sans / DejaVu / Liberation)" 1 google-noto-sans-fonts dnf
     else
-        record 2 "a general-purpose UI font (Noto Sans / DejaVu / Liberation)" 0 noto-fonts pac "browsers and apps show boxes without one"
+        record 2 "a general-purpose UI font (Noto Sans / DejaVu / Liberation)" 0 google-noto-sans-fonts dnf "browsers and apps show boxes without one"
     fi
-    if [ -n "$(fc-list :lang=ja 2>/dev/null | head -n1)" ]; then record 2 "a CJK font (Japanese)" 1 noto-fonts-cjk pac
-    else record 2 "a CJK font (Japanese)" 0 noto-fonts-cjk pac "welcome-logo kana, Japanese lyrics"; fi
+    if [ -n "$(fc-list :lang=ja 2>/dev/null | head -n1)" ]; then record 2 "a CJK font (Japanese)" 1 noto-fonts-cjk dnf
+    else record 2 "a CJK font (Japanese)" 0 noto-fonts-cjk dnf "welcome-logo kana, Japanese lyrics"; fi
 else
-    cmd 1 fc-list fontconfig pac
+    cmd 1 fc-list fontconfig dnf
 fi
 
 # --------------------------------------------------------------------------
 section "Audio, network, bluetooth, power"
 # --------------------------------------------------------------------------
-cmd 1 wpctl wireplumber pac "volume"
-cmd 1 pactl libpulse pac "mixer; the pipewire-pulse server answers it"
-cmd 2 parec libpulse pac "visualizer audio tap (or pw-record)"
-cmd 2 paplay libpulse pac "timer alarm fallback"
-cmd 1 nmcli networkmanager pac "Wi-Fi / Ethernet panel"
-cmd 1 bluetoothctl bluez-utils pac "Bluetooth panel"
-any 2 "Wi-Fi settings app (Quick Panel > Wi-Fi > Advanced)" plasma-nm pac kcmshell6 nm-connection-editor gnome-control-center
-any 2 "Bluetooth settings app (Quick Panel > Bluetooth > Advanced)" blueman pac blueman-manager blueberry kcmshell6 gnome-control-center
-cmd 1 upower upower pac "battery"
-cmd 1 notify-send libnotify pac "screenshots, errors, timers"
-cmd 1 xdg-open xdg-utils pac
-cmd 2 xdg-user-dir xdg-user-dirs pac
-cmd 2 systemd-inhibit systemd pac "Keep Awake"
-cmd 2 powerprofilesctl power-profiles-daemon pac "power profile button"
-cmd 2 brightnessctl brightnessctl pac "laptop brightness"
-cmd 2 ddcutil ddcutil pac "external monitor brightness"
-cmd 2 hyprsunset hyprsunset pac "Night Light and gamma"
+cmd 1 wpctl wireplumber dnf "volume"
+cmd 1 pactl pulseaudio-utils dnf "mixer; the pipewire-pulse server answers it"
+cmd 2 parec pulseaudio-utils dnf "visualizer audio tap (or pw-record)"
+cmd 2 paplay pulseaudio-utils dnf "timer alarm fallback"
+cmd 1 nmcli NetworkManager dnf "Wi-Fi / Ethernet panel"
+cmd 1 bluetoothctl bluez dnf "Bluetooth panel"
+any 2 "Wi-Fi settings app (Quick Panel > Wi-Fi > Advanced)" plasma-nm dnf kcmshell6 nm-connection-editor gnome-control-center
+any 2 "Bluetooth settings app (Quick Panel > Bluetooth > Advanced)" blueman dnf blueman-manager blueberry kcmshell6 gnome-control-center
+cmd 1 upower upower dnf "battery"
+cmd 1 notify-send libnotify dnf "screenshots, errors, timers"
+cmd 1 xdg-open xdg-utils dnf
+cmd 2 xdg-user-dir xdg-user-dirs dnf
+cmd 2 systemd-inhibit systemd dnf "Keep Awake"
+any 2 "power profiles daemon (power profile button)" tuned-ppd dnf tuned-ppd powerprofilesctl
+cmd 2 brightnessctl brightnessctl dnf "laptop brightness"
+cmd 2 ddcutil ddcutil dnf "external monitor brightness"
+cmd 2 hyprsunset hyprsunset dnf "Night Light and gamma"
 
 # Services (warn only: other init systems exist)
 if have systemctl; then
     svc() { # tier unit pkg scope(system|user)
         local s=system a=; [ "${4:-}" = user ] && { s=user; a=--user; }
         if systemctl $a is-active --quiet "$2" 2>/dev/null || systemctl $a is-enabled --quiet "$2" 2>/dev/null; then
-            record "$1" "$s service $2 active/enabled" 1 "$3" pac
+            record "$1" "$s service $2 active/enabled" 1 "$3" dnf
         else
-            record "$1" "$s service $2 active/enabled" 0 "$3" pac "enable it: systemctl ${a:+$a }enable --now $2"
+            record "$1" "$s service $2 active/enabled" 0 "$3" dnf "enable it: systemctl ${a:+$a }enable --now $2"
         fi
     }
-    svc 2 NetworkManager.service networkmanager system
+    svc 2 NetworkManager.service NetworkManager system
     svc 2 bluetooth.service bluez system
     svc 2 upower.service upower system
-    svc 2 power-profiles-daemon.service power-profiles-daemon system
+    if rpm -q tuned-ppd >/dev/null 2>&1; then svc 2 tuned-ppd.service tuned-ppd system; else svc 2 power-profiles-daemon.service power-profiles-daemon system; fi
     svc 2 pipewire.service pipewire user
     svc 2 wireplumber.service wireplumber user
-    svc 2 pipewire-pulse.service pipewire-pulse user
+    svc 2 pipewire-pulse.service pipewire-pulseaudio user
 fi
 
 # --------------------------------------------------------------------------
 section "Clipboard, screenshots, typing, pickers"
 # --------------------------------------------------------------------------
-cmd 1 wl-copy wl-clipboard pac
-cmd 1 wl-paste wl-clipboard pac
-cmd 2 cliphist cliphist pac "clipboard history"
-cmd 2 grim grim pac "screenshots, region selector"
-cmd 2 slurp slurp pac
-any 2 "ImageMagick" imagemagick pac magick convert
-cmd 3 tesseract tesseract pac "region OCR"
+cmd 1 wl-copy wl-clipboard dnf
+cmd 1 wl-paste wl-clipboard dnf
+cmd 2 cliphist cliphist dnf "clipboard history"
+cmd 2 grim grim dnf "screenshots, region selector"
+cmd 2 slurp slurp dnf
+any 2 "ImageMagick" ImageMagick dnf magick convert
+cmd 3 tesseract tesseract dnf "region OCR"
 if have tesseract; then
-    tesseract --list-langs 2>/dev/null | grep -qx eng && record 3 "tesseract language data (eng)" 1 tesseract-data-eng pac \
-        || record 3 "tesseract language data (eng)" 0 tesseract-data-eng pac
+    tesseract --list-langs 2>/dev/null | grep -qx eng && record 3 "tesseract language data (eng)" 1 tesseract-langpack-eng dnf \
+        || record 3 "tesseract language data (eng)" 0 tesseract-langpack-eng dnf
 fi
-cmd 3 swappy swappy pac "annotate on right-drag"
-cmd 3 wf-recorder wf-recorder pac "screen recording"
-cmd 2 hyprpicker hyprpicker pac "eyedropper"
-cmd 2 wtype wtype pac "on-screen keyboard, emoji paste"
-cmd 1 curl curl pac "weather, lyrics"
-cmd 1 jq jq pac
-any 2 "file chooser for avatar/banner/custom image" zenity pac zenity kdialog yad
-any 3 "terminal (kitty, foot, alacritty...)" kitty pac kitty foot alacritty wezterm gnome-terminal
+cmd 3 swappy swappy dnf "annotate on right-drag"
+cmd 3 wf-recorder wf-recorder dnf "screen recording"
+cmd 2 hyprpicker hyprpicker dnf "eyedropper"
+cmd 2 wtype wtype dnf "on-screen keyboard, emoji paste"
+cmd 1 curl curl dnf "weather, lyrics"
+cmd 1 jq jq dnf
+any 2 "file chooser for avatar/banner/custom image" zenity dnf zenity kdialog yad
+any 3 "terminal (kitty, foot, alacritty...)" kitty dnf kitty foot alacritty wezterm gnome-terminal
 
 # --------------------------------------------------------------------------
 section "Theming"
 # --------------------------------------------------------------------------
-cmd 2 matugen matugen-bin aur "wallpaper colours; needs matugen 2.x or newer"
+cmd 2 matugen matugen dnf "wallpaper colours; needs matugen 2.x or newer"
 if have matugen; then printf '  %s%s%s\n' "$D" "$(matugen --version 2>&1 | head -n1)" "$Z"; fi
-cmd 2 gsettings glib2 pac
-cmd 2 gdbus glib2 pac
-cmd 3 dconf dconf pac
+cmd 2 gsettings glib2 dnf
+cmd 2 gdbus glib2 dnf
+cmd 3 dconf dconf dnf
 if [ "${QT_QPA_PLATFORMTHEME:-}" = kde ]; then
-    record 3 "Qt app colours (QT_QPA_PLATFORMTHEME=kde, qt6ct not needed)" 1 "" pac
+    record 3 "Qt app colours (QT_QPA_PLATFORMTHEME=kde, qt6ct not needed)" 1 "" dnf
 else
-    any 3 "qt5ct / qt6ct (Qt app colours; then set QT_QPA_PLATFORMTHEME=qt6ct)" qt6ct pac qt6ct qt5ct
+    any 3 "qt5ct / qt6ct (Qt app colours; then set QT_QPA_PLATFORMTHEME=qt6ct)" qt6ct dnf qt6ct qt5ct
 fi
-cmd 3 xrdb xorg-xrdb pac "XWayland cursor"
+cmd 3 xrdb xrdb dnf "XWayland cursor"
 [ -d /usr/share/themes/adw-gtk3 ] || [ -d "$HOME/.themes/adw-gtk3" ] \
-    && record 3 "adw-gtk3 GTK theme" 1 adw-gtk-theme pac || record 3 "adw-gtk3 GTK theme" 0 adw-gtk-theme pac
+    && record 3 "adw-gtk3 GTK theme" 1 adw-gtk3-theme dnf || record 3 "adw-gtk3 GTK theme" 0 adw-gtk3-theme dnf
 if [ -n "${QT_QPA_PLATFORMTHEME:-}" ]; then
     printf '  %sQT_QPA_PLATFORMTHEME=%s%s\n' "$D" "$QT_QPA_PLATFORMTHEME" "$Z"
 else
@@ -309,32 +310,32 @@ fi
 # --------------------------------------------------------------------------
 section "Audio visualizer, equalizer, media"
 # --------------------------------------------------------------------------
-cmd 2 python3 python pac "note analyzer. NOTE: end-4's installer keeps Python in a private venv, this rice uses the SYSTEM python3"
+cmd 2 python3 python3 dnf "note analyzer. NOTE: end-4's installer keeps Python in a private venv, this rice uses the SYSTEM python3"
 if have python3; then
-    python3 -c 'import numpy' 2>/dev/null && record 2 "python module numpy (system python3)" 1 python-numpy pac \
-        || record 2 "python module numpy (system python3)" 0 python-numpy pac "without it the visualizer falls back to cava"
-    python3 -c 'import aubio' 2>/dev/null && record 3 "python module aubio (system python3)" 1 python-aubio pac \
-        || record 3 "python module aubio (system python3)" 0 python-aubio pac "optional better analyzer engine"
+    python3 -c 'import numpy' 2>/dev/null && record 2 "python module numpy (system python3)" 1 python3-numpy dnf \
+        || record 2 "python module numpy (system python3)" 0 python3-numpy dnf "without it the visualizer falls back to cava"
+    python3 -c 'import aubio' 2>/dev/null && record 3 "python module aubio (system python3)" 1 aubio-python3 dnf \
+        || record 3 "python module aubio (system python3)" 0 aubio-python3 dnf "optional better analyzer engine"
 fi
-cmd 2 cava cava pac "visualizer fallback / PC waves"
-any 2 "audio capture for the analyzer" libpulse pac parec pw-record
-cmd 2 ffmpeg ffmpeg pac "thumbnails, song recognition"
-cmd 3 easyeffects easyeffects pac "the 10-band equalizer"
-cmd 3 songrec songrec aur "song recognition"
-cmd 3 mpvpaper mpvpaper aur "video wallpaper via mpv (built-in player is the fallback)"
+cmd 2 cava cava dnf "visualizer fallback / PC waves"
+any 2 "audio capture for the analyzer" pulseaudio-utils dnf parec pw-record
+cmd 2 ffmpeg ffmpeg-free dnf "thumbnails, song recognition"
+cmd 3 easyeffects easyeffects dnf "the 10-band equalizer"
+any 3 "song recognition (songrec)" "songrec (flatpak install flathub com.github.marinm.songrec)" manual songrec com.github.marinm.songrec
+cmd 3 mpvpaper mpvpaper dnf "video wallpaper via mpv (built-in player is the fallback)"
 
 # --------------------------------------------------------------------------
 section "Updates badge, displays, extras"
 # --------------------------------------------------------------------------
-cmd 3 checkupdates pacman-contrib pac "official update count (Arch only)"
-any 3 "AUR helper for the update count (install yay or paru from the AUR)" "" manual yay paru
-cmd 3 nwg-displays nwg-displays pac "extra in Settings > Hyprland > Displays"
-cmd 3 hyprpm hyprland pac "only for the scroll-overview plugin"
-cmd 3 warp-cli cloudflare-warp-bin aur "WARP toggle"
-cmd 3 git git pac
-cmd 3 node nodejs pac "Discord voice companion"
-cmd 3 pnpm pnpm pac "Discord voice companion"
-any 3 "Discord client (Vesktop / Equibop / Discord)" vesktop aur vesktop equibop discord
+cmd 3 dnf dnf5 dnf "update count"
+cmd 3 flatpak flatpak dnf "Flatpak update count"
+cmd 3 nwg-displays "nwg-displays (pipx install nwg-displays)" manual "extra in Settings > Hyprland > Displays"
+cmd 3 hyprpm hyprland dnf "only for the scroll-overview plugin"
+cmd 3 warp-cli "cloudflare-warp (Cloudflare repo: pkg.cloudflareclient.com)" manual "WARP toggle"
+cmd 3 git git dnf
+cmd 3 node nodejs dnf "Discord voice companion"
+cmd 3 pnpm pnpm dnf "Discord voice companion"
+any 3 "Discord client (Vesktop / Equibop / Discord)" "vesktop (flatpak install flathub dev.vencord.Vesktop)" manual vesktop equibop discord dev.vencord.Vesktop
 
 # --------------------------------------------------------------------------
 section "Bare-system layer (what a minimal Hyprland / no-desktop install often lacks)"
@@ -343,19 +344,19 @@ section "Bare-system layer (what a minimal Hyprland / no-desktop install often l
 libexec_has() { local d; for d in /usr/lib /usr/libexec /usr/lib64; do [ -x "$d/$1" ] && return 0; done; return 1; }
 
 if [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ]; then
-    record 1 "D-Bus session bus" 1 dbus pac
+    record 1 "D-Bus session bus" 1 dbus dnf
 else
-    record 1 "D-Bus session bus" 0 dbus pac "start Hyprland from a real login (TTY or display manager), not su/ssh"
+    record 1 "D-Bus session bus" 0 dbus dnf "start Hyprland from a real login (TTY or display manager), not su/ssh"
 fi
 if have loginctl && [ -n "${XDG_SESSION_ID:-}" ] && loginctl show-session "$XDG_SESSION_ID" >/dev/null 2>&1; then
-    record 2 "systemd-logind session (power menu, suspend, lock)" 1 systemd pac
+    record 2 "systemd-logind session (power menu, suspend, lock)" 1 systemd dnf
 else
-    record 2 "systemd-logind session (power menu, suspend, lock)" 0 systemd pac "log in through a TTY or display manager that opens a logind session"
+    record 2 "systemd-logind session (power menu, suspend, lock)" 0 systemd dnf "log in through a TTY or display manager that opens a logind session"
 fi
 if libexec_has polkit-1/polkitd || have pkaction; then
-    record 1 "polkit daemon (the shell is the agent, polkitd must exist)" 1 polkit pac
+    record 1 "polkit daemon (the shell is the agent, polkitd must exist)" 1 polkit dnf
 else
-    record 1 "polkit daemon (the shell is the agent, polkitd must exist)" 0 polkit pac
+    record 1 "polkit daemon (the shell is the agent, polkitd must exist)" 0 polkit dnf
 fi
 egl=0
 for f in /usr/lib/libEGL.so* /usr/lib64/libEGL.so* /usr/lib/*-linux-gnu/libEGL.so*; do
@@ -364,23 +365,23 @@ done
 if [ "$egl" = 0 ] && have ldconfig; then ldconfig -p 2>/dev/null | grep -q 'libEGL\.so' && egl=1; fi
 if [ "$egl" = 0 ] && [ -x /sbin/ldconfig ]; then /sbin/ldconfig -p 2>/dev/null | grep -q 'libEGL\.so' && egl=1; fi
 if [ "$egl" = 1 ]; then
-    record 1 "OpenGL/EGL stack (Qt Quick renders with it)" 1 mesa pac
+    record 1 "OpenGL/EGL stack (Qt Quick renders with it)" 1 mesa-dri-drivers dnf
 else
-    record 1 "OpenGL/EGL stack (Qt Quick renders with it)" 0 mesa pac "also a GPU driver: vulkan-radeon / vulkan-intel / nvidia-utils"
+    record 1 "OpenGL/EGL stack (Qt Quick renders with it)" 0 mesa-dri-drivers dnf "also a GPU driver: mesa-vulkan-drivers / akmod-nvidia"
 fi
-have Xwayland && record 2 "Xwayland (X11 apps, cursor sync for them)" 1 xorg-xwayland pac \
-    || record 2 "Xwayland (X11 apps, cursor sync for them)" 0 xorg-xwayland pac "normally pulled in by hyprland"
-libexec_has xdg-desktop-portal && record 2 "xdg-desktop-portal" 1 xdg-desktop-portal pac \
-    || record 2 "xdg-desktop-portal" 0 xdg-desktop-portal pac "screen sharing and file dialogs in apps (the rice itself doesn't call it)"
-libexec_has xdg-desktop-portal-hyprland && record 2 "xdg-desktop-portal-hyprland" 1 xdg-desktop-portal-hyprland pac \
-    || record 2 "xdg-desktop-portal-hyprland" 0 xdg-desktop-portal-hyprland pac "screen sharing"
-libexec_has xdg-desktop-portal-gtk && record 3 "xdg-desktop-portal-gtk" 1 xdg-desktop-portal-gtk pac \
-    || record 3 "xdg-desktop-portal-gtk" 0 xdg-desktop-portal-gtk pac "file dialogs in GTK/Electron apps"
-any 2 "file manager (the dock's Files stack opens folders with xdg-open)" thunar pac thunar nautilus dolphin nemo pcmanfm pcmanfm-qt caja
+have Xwayland && record 2 "Xwayland (X11 apps, cursor sync for them)" 1 xorg-x11-server-Xwayland dnf \
+    || record 2 "Xwayland (X11 apps, cursor sync for them)" 0 xorg-x11-server-Xwayland dnf "normally pulled in by hyprland"
+libexec_has xdg-desktop-portal && record 2 "xdg-desktop-portal" 1 xdg-desktop-portal dnf \
+    || record 2 "xdg-desktop-portal" 0 xdg-desktop-portal dnf "screen sharing and file dialogs in apps (the rice itself doesn't call it)"
+libexec_has xdg-desktop-portal-hyprland && record 2 "xdg-desktop-portal-hyprland" 1 xdg-desktop-portal-hyprland dnf \
+    || record 2 "xdg-desktop-portal-hyprland" 0 xdg-desktop-portal-hyprland dnf "screen sharing"
+libexec_has xdg-desktop-portal-gtk && record 3 "xdg-desktop-portal-gtk" 1 xdg-desktop-portal-gtk dnf \
+    || record 3 "xdg-desktop-portal-gtk" 0 xdg-desktop-portal-gtk dnf "file dialogs in GTK/Electron apps"
+any 2 "file manager (the dock's Files stack opens folders with xdg-open)" Thunar dnf thunar nautilus dolphin nemo pcmanfm pcmanfm-qt caja
 if have xdg-mime && [ -n "$(xdg-mime query default inode/directory 2>/dev/null)" ]; then
-    record 2 "default app for folders (xdg-mime inode/directory)" 1 "" pac
+    record 2 "default app for folders (xdg-mime inode/directory)" 1 "" dnf
 else
-    record 2 "default app for folders (xdg-mime inode/directory)" 0 "" pac "xdg-mime default <your-file-manager>.desktop inode/directory"
+    record 2 "default app for folders (xdg-mime inode/directory)" 0 "" dnf "xdg-mime default <your-file-manager>.desktop inode/directory"
 fi
 ic=0
 for d in /usr/share/icons/* "$HOME"/.local/share/icons/* "$HOME"/.icons/*; do
@@ -388,12 +389,12 @@ for d in /usr/share/icons/* "$HOME"/.local/share/icons/* "$HOME"/.icons/*; do
     case "$(basename "$d")" in hicolor|default|locolor) continue ;; esac
     ic=$((ic + 1))
 done
-[ "$ic" -gt 0 ] && record 2 "an icon theme ($ic found; app icons in the dock, bar, overview)" 1 adwaita-icon-theme pac \
-    || record 2 "an icon theme (app icons in the dock, bar, overview)" 0 adwaita-icon-theme pac "or papirus-icon-theme"
+[ "$ic" -gt 0 ] && record 2 "an icon theme ($ic found; app icons in the dock, bar, overview)" 1 adwaita-icon-theme dnf \
+    || record 2 "an icon theme (app icons in the dock, bar, overview)" 0 adwaita-icon-theme dnf "or papirus-icon-theme"
 if have xdg-user-dir && [ -d "$(xdg-user-dir PICTURES 2>/dev/null)" ]; then
-    record 2 "XDG user folders exist (~/Pictures, ~/Videos ...)" 1 xdg-user-dirs pac
+    record 2 "XDG user folders exist (~/Pictures, ~/Videos ...)" 1 xdg-user-dirs dnf
 else
-    record 2 "XDG user folders exist (~/Pictures, ~/Videos ...)" 0 xdg-user-dirs pac "run: xdg-user-dirs-update"
+    record 2 "XDG user folders exist (~/Pictures, ~/Videos ...)" 0 xdg-user-dirs dnf "run: xdg-user-dirs-update"
 fi
 if [ -n "${WAYLAND_DISPLAY:-}" ] && have systemctl && systemctl --user show-environment >/dev/null 2>&1; then
     if systemctl --user show-environment 2>/dev/null | grep -q '^WAYLAND_DISPLAY='; then
@@ -403,7 +404,7 @@ if [ -n "${WAYLAND_DISPLAY:-}" ] && have systemctl && systemctl --user show-envi
             "autostart in Hyprland: dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP (install-deps.sh writes it)"
     fi
 fi
-any 3 "secret service for apps (Discord, browsers, VS Code, saved passwords)" gnome-keyring pac gnome-keyring-daemon keepassxc
+any 3 "secret service for apps (Discord, browsers, VS Code, saved passwords)" gnome-keyring dnf gnome-keyring-daemon keepassxc
 if [ -d "$HOME/.config/hypr" ]; then
     if grep -rqsE '(qs|quickshell)[[:space:]]+-c[[:space:]]+sekaipop' "$HOME/.config/hypr" 2>/dev/null; then
         record 2 "Hyprland autostarts the shell (qs -c sekaipop)" 1 "" manual
@@ -463,12 +464,11 @@ if [ "$n_t1" -eq 0 ]; then printf '  %s%s %sCore is complete: the shell can star
 else printf '  %s%s %s%d core item(s) missing: install them first.%s\n' "$R" "$G_BAD" "$B" "$n_t1" "$Z"; fi
 
 show_tier() { # <tier> <title>
-    local t=$1 title=$2 pac="${MISS[$1:pac]:-}" aur="${MISS[$1:aur]:-}" man="${MISS[$1:manual]:-}" m
-    [ -z "$pac$aur$man" ] && return
-    pac=${pac//|/ }; aur=${aur//|/ }
+    local t=$1 title=$2 dnf="${MISS[$1:dnf]:-}" man="${MISS[$1:manual]:-}" m
+    [ -z "$dnf$man" ] && return
+    dnf=${dnf//|/ }
     printf '\n  %s%s%s\n' "$B" "$title" "$Z"
-    [ -n "$pac" ] && printf '    sudo pacman -S --needed %s\n' "$pac"
-    [ -n "$aur" ] && printf '    yay -S %s\n' "$aur"
+    [ -n "$dnf" ] && printf '    sudo dnf install %s\n' "$dnf"
     if [ -n "$man" ]; then
         printf '    install by hand:\n'
         while IFS= read -r m; do printf '      - %s\n' "$m"; done <<<"${man//|/$'\n'}"
