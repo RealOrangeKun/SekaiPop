@@ -48,7 +48,18 @@ Item {
     // start. The lanes get what is left (lanesW).
     readonly property real ctlW: 244
     readonly property real ctlGap: 26
-    readonly property real lanesW: Math.max(0, root.width - root.ctlW - root.ctlGap)
+    // On a small screen the shelf is too narrow for the strip AND the lanes, even with
+    // icon-only keycaps. Then the strip is left out (Settings Panel -> Bar has the same
+    // switches) and RESET / CLEAR ALL stand in a column in its place, off the lane titles.
+    readonly property real keyColW: 92
+    readonly property bool narrow: {
+        let sum = 0
+        for (const z of root.laneNames)
+            sum += root.laneMin(z, true, root.rowsFit(root.tightTop, root.tightBottom))
+        return root.width > 0 && sum + 3 * root.laneGap > root.width - root.ctlW - root.ctlGap
+    }
+    readonly property real leadW: root.narrow ? root.keyColW + 14 : root.ctlW + root.ctlGap
+    readonly property real lanesW: Math.max(0, root.width - root.leadW)
 
     // What the pointer is over ("" = nothing), so the heading can name it.
     property string styleHover: ""
@@ -57,7 +68,15 @@ Item {
     // ===== keycap sizes =====
     readonly property real flowSpacing: 8
     // The keycaps start 34px down in a lane and keep 10px clear of its bottom edge.
-    readonly property int maxRows: Math.max(1, Math.floor((root.height - 34 - 10 + root.flowSpacing) / (root.chipH + root.flowSpacing)))
+    // On a narrow shelf the lane titles sit tighter (tightTop / tightBottom) so one
+    // more row fits: on a 768px-high screen that is three rows instead of two.
+    readonly property real tightTop: 28
+    readonly property real tightBottom: 4
+    readonly property real chipTop: root.narrow ? root.tightTop : 34
+    function rowsFit(top, bottom) {
+        return Math.max(1, Math.floor((root.height - top - bottom + root.flowSpacing) / (root.chipH + root.flowSpacing)))
+    }
+    readonly property int maxRows: root.narrow ? root.rowsFit(root.tightTop, root.tightBottom) : root.rowsFit(34, 10)
     property var chipWidths: ({})
     property real iconW: 44
 
@@ -119,7 +138,8 @@ Item {
     }
 
     // The narrowest the lane can be while its keycaps still fit in maxRows.
-    function laneMin(zone, compact) {
+    function laneMin(zone, compact, rows) {
+        const maxRows = rows ?? root.maxRows
         const ids = root.idsIn(zone)
         if (ids.length === 0)
             return 120
@@ -131,7 +151,7 @@ Item {
         }
         while (lo < hi) {
             const mid = Math.floor((lo + hi) / 2)
-            if (root.rowsFor(ids, mid, compact) <= root.maxRows)
+            if (root.rowsFor(ids, mid, compact) <= maxRows)
                 hi = mid
             else
                 lo = mid + 1
@@ -268,7 +288,7 @@ Item {
 
         let before = 0
         let mx = laneRow.x + lane.x + 14
-        let my = 34
+        let my = root.chipTop
         for (let i = 0; i < ids.length; i++) {
             if (ids[i] === root.dragId)
                 continue
@@ -361,6 +381,7 @@ Item {
 
     Column {
         id: controls
+        visible: !root.narrow
         x: 6
         width: root.ctlW - 6
         anchors.verticalCenter: parent.verticalCenter
@@ -436,7 +457,7 @@ Item {
     // ===== the lanes =====
     Row {
         id: laneRow
-        x: root.ctlW + root.ctlGap
+        x: root.leadW
         spacing: root.laneGap
 
         Repeater {
@@ -476,7 +497,7 @@ Item {
 
                 Text {
                     x: 16
-                    y: 9
+                    y: root.narrow ? 7 : 9
                     text: root.zoneTitles[lane.zone]
                     color: Theme.pInk
                     font.family: Theme.fontFamily
@@ -498,7 +519,7 @@ Item {
 
                 Flow {
                     x: 14
-                    y: 34
+                    y: root.chipTop
                     width: lane.width - 28
                     spacing: root.flowSpacing
 
@@ -522,12 +543,13 @@ Item {
     }
 
     // ===== RESET and CLEAR ALL =====
-    Row {
+    Grid {
         id: keyRow
         layoutDirection: Qt.RightToLeft
+        columns: root.narrow ? 1 : 2
         spacing: 8
-        x: root.width - keyRow.width - 12
-        y: 6
+        x: root.narrow ? root.keyColW - keyRow.width : root.width - keyRow.width - 12
+        y: root.narrow ? (root.height - keyRow.height) / 2 : 6
 
         Item {
             id: resetKey
