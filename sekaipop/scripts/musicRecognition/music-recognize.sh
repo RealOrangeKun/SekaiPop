@@ -11,6 +11,10 @@
 # doesn't show up as "notify-send" with the placeholder.
 note() { notify-send -a "Music Recognition" -i "material:music_cast" "Music Recognition" "$1" 2>/dev/null; }
 
+# On Fedora songrec comes from Flathub; its sandbox gets the recording through file forwarding.
+if ! command -v songrec >/dev/null 2>&1 && flatpak info com.github.marinm.songrec >/dev/null 2>&1; then
+    songrec() { flatpak run --file-forwarding com.github.marinm.songrec "$1" @@ "$2" @@; }
+fi
 command -v songrec >/dev/null 2>&1 || { note "songrec isn't installed"; exit 0; }
 command -v ffmpeg >/dev/null 2>&1 || { note "ffmpeg isn't installed"; exit 0; }
 

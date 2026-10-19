@@ -160,7 +160,11 @@ if [ "$CORE_ONLY" = 0 ]; then
 fi
 [ "$WITH_OPT" = 1 ] && WANT+=("${OPTIONAL[@]}")
 
-installed() { rpm -q --whatprovides "$1" >/dev/null 2>&1; }
+installed() {
+    rpm -q --whatprovides "$1" >/dev/null 2>&1 && return 0
+    # a Quickshell fork (e.g. noctalia-qs) already provides the QML modules: don't pull in a conflicting quickshell
+    [ "$1" = quickshell ] && rpm -q --whatprovides 'qt6qml(Quickshell)' >/dev/null 2>&1
+}
 
 # KDE / Plasma already present? Then Qt apps are themed by Plasma (QT_QPA_PLATFORMTHEME=kde) and qt6ct is not wanted.
 IS_KDE=0
