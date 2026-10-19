@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # install-deps.sh: installs everything SekaiPop needs to be a full working desktop
-# on Arch / CachyOS / EndeavourOS (anything with pacman), starting from a minimal Hyprland system.
+# on Fedora (anything with dnf), starting from a minimal Hyprland system.
 #
 # It does the same three jobs as end-4's "./setup install", for this rice:
-#   1. packages      (repo packages with pacman, the rest from the AUR with yay/paru)
-#   2. setup         (services, groups, user folders, Google Sans Flex font)
+#   1. packages      (Fedora repos + the lionheartp/Hyprland COPR with dnf, songrec from Flathub)
+#   2. setup         (services, groups, user folders, Google Sans Flex / Material Symbols / Nerd fonts)
 #   3. session glue  (a small Hyprland file for portals / screen sharing / autostart)
 # It does NOT copy the rice itself and does NOT touch GPU drivers (same as end-4's).
 #
 # Usage:  ./install-deps.sh [options]
 #   --dry-run             show what would happen, change nothing
-#   --yes                 no questions, pass --noconfirm to pacman/yay
+#   --yes                 no questions, pass -y to dnf
 #   --core-only           only what the shell cannot start without
 #   --with-optional       also songrec, mpvpaper, aubio, nwg-displays, Discord-voice tools, hypridle...
 #   --no-desktop-layer    skip portals, file manager, fonts, keyring, icon theme (you already have a desktop)
@@ -18,7 +18,7 @@
 #   --ddc                 set up i2c access for external-monitor brightness (ddcutil)
 #   --file-manager dolphin|thunar|none   which file manager to add (default: dolphin if you run KDE/Plasma or already have it, else thunar)
 #   --no-update           don't run a full system update first
-#   --no-aur  --no-services  --no-fonts  --no-session
+#   --no-copr  --no-services  --no-fonts  --no-session
 #   -h, --help
 #
 # Run as your normal user (it uses sudo where needed). Run ./check-deps.sh afterwards.
@@ -26,7 +26,7 @@
 set -u
 
 DRY=0; YES=0; CORE_ONLY=0; WITH_OPT=0; DESKTOP=1; GPU=auto; DDC=0; FM=auto
-UPDATE=1; AUR=1; SERVICES=1; FONTS=1; SESSION=1
+UPDATE=1; COPR=1; SERVICES=1; FONTS=1; SESSION=1
 while [ $# -gt 0 ]; do
     case "$1" in
         --dry-run) DRY=1 ;;
@@ -38,7 +38,7 @@ while [ $# -gt 0 ]; do
         --ddc) DDC=1 ;;
         --file-manager) shift; FM=${1:-}; case "$FM" in dolphin|thunar|none) ;; *) echo "--file-manager needs dolphin|thunar|none" >&2; exit 2 ;; esac ;;
         --no-update) UPDATE=0 ;;
-        --no-aur) AUR=0 ;;
+        --no-copr|--no-aur) COPR=0 ;;
         --no-services) SERVICES=0 ;;
         --no-fonts) FONTS=0 ;;
         --no-session) SESSION=0 ;;
@@ -111,40 +111,47 @@ have() { command -v "$1" >/dev/null 2>&1; }
 [ "${SEKAIPOP_FULL_INSTALL:-0}" = 1 ] || banner "SekaiPop dependencies" "packages, fonts, services, groups"
 step "Checking the system"
 [ "$(id -u)" = 0 ] && { echo "Run this as your normal user, not root (it calls sudo itself)." >&2; exit 1; }
-have pacman || { echo "pacman not found: this installer is for Arch-based systems. Read DEPENDENCIES.md for the package list." >&2; exit 1; }
-have sudo   || { echo "sudo not found: install it first (pacman -S sudo) and add yourself to the wheel group." >&2; exit 1; }
+have dnf  || { echo "dnf not found: this installer is for Fedora. Read DEPENDENCIES.md for the package list." >&2; exit 1; }
+have sudo || { echo "sudo not found: install it first (dnf install sudo) and add yourself to the wheel group." >&2; exit 1; }
 [ "$DRY" = 1 ] && info "DRY RUN: nothing will be changed."
 ok "distro: $(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-unknown}")"
 
 # ---------------------------------------------------------------- package lists
-# "a|b" = try a in the repos, else b (b is then taken from the AUR). Plain names not in the repos go to the AUR.
+# "a|b" = try a, else b. Hyprland 0.56 (Lua config), quickshell, matugen and the hypr* tools come from
+# the lionheartp/Hyprland COPR. Fonts that Fedora does not package are downloaded in step 2.
+COPR_REPO=lionheartp/Hyprland
 CORE=(
-  hyprland "quickshell|quickshell-git"
-  qt6-base qt6-declarative "qt6-multimedia-ffmpeg|qt6-multimedia" qt6-svg qt6-imageformats qt6-wayland qt6-shadertools
-  dbus polkit mesa
-  pipewire wireplumber pipewire-pulse libpulse
-  networkmanager bluez bluez-utils upower power-profiles-daemon
+  hyprland quickshell
+  qt6-qtbase qt6-qtdeclarative qt6-qtmultimedia qt6-qtsvg qt6-qtimageformats qt6-qtwayland qt6-qtshadertools
+  dbus polkit mesa-dri-drivers
+  pipewire wireplumber pipewire-pulseaudio pulseaudio-utils
+  NetworkManager bluez upower "tuned-ppd|power-profiles-daemon"
   libnotify wl-clipboard jq curl git xdg-utils xdg-user-dirs fontconfig
-  python python-numpy
-  "ttf-material-symbols-variable|ttf-material-symbols-variable-git"
+  python3 python3-numpy
 )
 DESKTOP_LAYER=(
-  xorg-xwayland
+  xorg-x11-server-Xwayland
   xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
   gvfs adwaita-icon-theme
-  noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-jetbrains-mono-nerd
+  google-noto-sans-fonts google-noto-sans-cjk-fonts google-noto-color-emoji-fonts
   gnome-keyring libsecret pipewire-alsa
 )
 FEATURES=(
-  "matugen|matugen-bin" cava easyeffects
+  matugen cava easyeffects
   grim slurp cliphist wtype hyprpicker hyprsunset
-  imagemagick tesseract tesseract-data-eng swappy wf-recorder ffmpeg
+  ImageMagick tesseract tesseract-langpack-eng swappy wf-recorder "ffmpeg|ffmpeg-free"
   brightnessctl ddcutil zenity kitty
   plasma-nm kde-cli-tools blueman
-  dconf glib2 adw-gtk-theme xorg-xrdb
-  libcanberra sound-theme-freedesktop pacman-contrib
+  dconf glib2 adw-gtk3-theme xrdb
+  libcanberra sound-theme-freedesktop
 )
-OPTIONAL=( python-aubio songrec mpvpaper nwg-displays hypridle nodejs pnpm cloudflare-warp-bin )
+OPTIONAL=( aubio-python3 mpvpaper hypridle nodejs pnpm )
+# not packaged for Fedora: handled after the dnf step
+FLATPAKS=( com.github.marinm.songrec )
+MANUAL_HINTS=(
+  "nwg-displays: pipx install nwg-displays (or skip it, Settings > Hyprland > Displays works without it)"
+  "WARP toggle: add Cloudflare's repo from pkg.cloudflareclient.com, sudo dnf install cloudflare-warp, sudo systemctl enable --now warp-svc"
+)
 
 WANT=("${CORE[@]}")
 if [ "$CORE_ONLY" = 0 ]; then
@@ -153,18 +160,20 @@ if [ "$CORE_ONLY" = 0 ]; then
 fi
 [ "$WITH_OPT" = 1 ] && WANT+=("${OPTIONAL[@]}")
 
+installed() { rpm -q --whatprovides "$1" >/dev/null 2>&1; }
+
 # KDE / Plasma already present? Then Qt apps are themed by Plasma (QT_QPA_PLATFORMTHEME=kde) and qt6ct is not wanted.
 IS_KDE=0
-pacman -T plasma-integration >/dev/null 2>&1 && IS_KDE=1
+installed plasma-integration && IS_KDE=1
 [ "${QT_QPA_PLATFORMTHEME:-}" = kde ] && IS_KDE=1
 
 if [ "$CORE_ONLY" = 0 ] && [ "$DESKTOP" = 1 ]; then
     if [ "$FM" = auto ]; then
-        if [ "$IS_KDE" = 1 ] || pacman -T dolphin >/dev/null 2>&1; then FM=dolphin; else FM=thunar; fi
+        if [ "$IS_KDE" = 1 ] || installed dolphin; then FM=dolphin; else FM=thunar; fi
     fi
     case "$FM" in
         dolphin) WANT+=(dolphin kio-extras ffmpegthumbs) ;;
-        thunar)  WANT+=(thunar thunar-volman tumbler) ;;
+        thunar)  WANT+=(Thunar thunar-volman tumbler) ;;
     esac
     # qt6ct only on a system where nothing else themes Qt apps
     [ "$IS_KDE" = 0 ] && WANT+=(qt6ct)
@@ -184,78 +193,77 @@ if [ "$GPU" = auto ]; then
     done
 fi
 case "$GPU" in
-    amd)    WANT+=(vulkan-radeon) ;;
-    intel)  WANT+=(vulkan-intel) ;;
-    nvidia) warn "NVIDIA detected: install your NVIDIA driver yourself (e.g. nvidia-open + nvidia-utils). This script never touches it." ;;
+    amd|intel) WANT+=(mesa-vulkan-drivers) ;;
+    nvidia) warn "NVIDIA detected: install your NVIDIA driver yourself (e.g. akmod-nvidia from RPM Fusion). This script never touches it." ;;
 esac
 info "GPU: $GPU"
 
 # ---------------------------------------------------------------- 1. packages
 step "1. Packages"
+DNFFLAGS=(); [ "$YES" = 1 ] && DNFFLAGS+=(-y)
+
+if [ "$COPR" = 1 ]; then
+    if dnf copr list 2>/dev/null | grep -qiF "$COPR_REPO"; then
+        info "COPR $COPR_REPO already enabled"
+    elif ask "Enable the $COPR_REPO COPR (Hyprland 0.56+, quickshell, matugen, hypr* tools)?"; then
+        installed dnf5-plugins || installed dnf-plugins-core || run sudo dnf install "${DNFFLAGS[@]}" dnf5-plugins
+        run sudo dnf copr enable -y "$COPR_REPO" || fail "could not enable the $COPR_REPO COPR"
+    else
+        warn "without the COPR, quickshell / matugen / hyprsunset and a Lua-config Hyprland may not be found"
+    fi
+else
+    warn "--no-copr: packages only found in $COPR_REPO will be skipped"
+fi
+
 if [ "$UPDATE" = 1 ]; then
-    if ask "Run a full system update first (sudo pacman -Syu)? Recommended on a fresh install."; then
-        if [ "$YES" = 1 ]; then run sudo pacman -Syu --noconfirm; else run sudo pacman -Syu; fi
+    if ask "Run a full system update first (sudo dnf upgrade --refresh)? Recommended on a fresh install."; then
+        run sudo dnf upgrade --refresh "${DNFFLAGS[@]}"
     fi
 fi
 
-REPO=(); AURP=(); ALREADY=()
+# every package name the enabled repos offer, looked up once
+AVAIL=$(dnf repoquery -q --available --qf '%{name}\n' 2>/dev/null | sort -u)
+available() { grep -qxF "$1" <<<"$AVAIL" || [ -n "$(dnf repoquery -q --whatprovides "$1" --latest-limit 1 2>/dev/null)" ]; }
+
+REPO=(); MISSING=(); ALREADY=()
 for entry in "${WANT[@]}"; do
     IFS='|' read -ra alts <<<"$entry"
-    # already satisfied (installed, or provided by a -git / AUR build of the same thing)? leave it alone.
-    # This is what stops conflicts like adw-gtk-theme vs adw-gtk-theme-git.
+    # already satisfied (installed, or provided by another build of the same thing)? leave it alone.
     satisfied=0
     for a in "${alts[@]}"; do
-        if pacman -T "$a" >/dev/null 2>&1; then satisfied=1; ALREADY+=("$a"); break; fi
+        if installed "$a"; then satisfied=1; ALREADY+=("$a"); break; fi
     done
     [ "$satisfied" = 1 ] && continue
     hit=""
     for a in "${alts[@]}"; do
-        if pacman -Si "$a" >/dev/null 2>&1; then hit=$a; break; fi
+        if available "$a"; then hit=$a; break; fi
     done
-    if [ -n "$hit" ]; then REPO+=("$hit"); else AURP+=("${alts[${#alts[@]}-1]}"); fi
+    if [ -n "$hit" ]; then REPO+=("$hit"); else MISSING+=("${alts[0]}"); fi
 done
-info "${#ALREADY[@]} already installed (kept as they are), ${#REPO[@]} to install from the repos, ${#AURP[@]} from the AUR"
-[ "${#REPO[@]}" -gt 0 ] && info "repos: ${REPO[*]}"
-[ "${#AURP[@]}" -gt 0 ] && info "AUR: ${AURP[*]}"
+info "${#ALREADY[@]} already installed (kept as they are), ${#REPO[@]} to install, ${#MISSING[@]} not found in your repos"
+[ "${#REPO[@]}" -gt 0 ] && info "dnf: ${REPO[*]}"
 
-PACFLAGS=(--needed); [ "$YES" = 1 ] && PACFLAGS+=(--noconfirm)
 if [ "${#REPO[@]}" -gt 0 ]; then
-    if ! run sudo pacman -S "${PACFLAGS[@]}" "${REPO[@]}"; then
+    if ! run sudo dnf install "${DNFFLAGS[@]}" "${REPO[@]}"; then
         warn "the batch install failed (usually a package conflict), retrying one package at a time"
         for p in "${REPO[@]}"; do
-            run sudo pacman -S "${PACFLAGS[@]}" "$p" || fail "pacman could not install $p (conflicts with something you have installed?)"
+            run sudo dnf install "${DNFFLAGS[@]}" "$p" || fail "dnf could not install $p (conflicts with something you have installed?)"
         done
     fi
 fi
+[ "${#MISSING[@]}" -gt 0 ] && fail "not found in any enabled repo: ${MISSING[*]} (is the $COPR_REPO COPR enabled?)"
 
-if [ "${#AURP[@]}" -gt 0 ]; then
-    if [ "$AUR" = 0 ]; then
-        warn "--no-aur: skipped these, install them yourself: ${AURP[*]}"
+if [ "$WITH_OPT" = 1 ]; then
+    if have flatpak; then
+        run flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+        for f in "${FLATPAKS[@]}"; do
+            flatpak info "$f" >/dev/null 2>&1 && continue
+            run flatpak install --user "${DNFFLAGS[@]}" flathub "$f" || fail "flatpak could not install $f"
+        done
     else
-        helper=""
-        have yay && helper=yay
-        [ -z "$helper" ] && have paru && helper=paru
-        if [ -z "$helper" ]; then
-            warn "no AUR helper found (yay or paru)."
-            if ask "Build yay-bin from the AUR now (needs base-devel + git, like end-4's installer)?"; then
-                run sudo pacman -S --needed base-devel git
-                run_sh 'rm -rf /tmp/sekaipop-yay && git clone https://aur.archlinux.org/yay-bin.git /tmp/sekaipop-yay && cd /tmp/sekaipop-yay && makepkg -si'"$([ "$YES" = 1 ] && echo ' --noconfirm')"' && cd / && rm -rf /tmp/sekaipop-yay' \
-                    || fail "could not build yay"
-                helper=yay
-            fi
-        fi
-        if [ -n "$helper" ]; then
-            AURFLAGS=(-S --needed); [ "$YES" = 1 ] && AURFLAGS+=(--noconfirm)
-            if ! run "$helper" "${AURFLAGS[@]}" "${AURP[@]}"; then
-                warn "the AUR batch failed, retrying one package at a time"
-                for p in "${AURP[@]}"; do
-                    run "$helper" "${AURFLAGS[@]}" "$p" || fail "AUR: could not build $p"
-                done
-            fi
-        else
-            warn "skipped the AUR packages: ${AURP[*]}"
-        fi
+        warn "flatpak not found: skipped ${FLATPAKS[*]}"
     fi
+    for h in "${MANUAL_HINTS[@]}"; do warn "by hand: $h"; done
 fi
 
 # ---------------------------------------------------------------- 2. setup
@@ -268,6 +276,23 @@ if [ "$FONTS" = 1 ]; then
         info "installing Google Sans Flex (the same source end-4's installer uses)"
         run_sh 'set -e; d=$(mktemp -d); git clone --depth 1 --recurse-submodules https://github.com/end-4/google-sans-flex "$d/gsf"; mkdir -p "$HOME/.local/share/fonts/sekaipop-google-sans-flex"; cp -r "$d/gsf/." "$HOME/.local/share/fonts/sekaipop-google-sans-flex/"; rm -rf "$HOME/.local/share/fonts/sekaipop-google-sans-flex/.git"; fc-cache -f; rm -rf "$d"' \
             || fail "Google Sans Flex install failed (put the .ttf files in ~/.local/share/fonts by hand and run fc-cache -f)"
+    fi
+    # Fedora packages neither of these
+    if have fc-list && fc-list 2>/dev/null | grep -qi "Material Symbols Rounded"; then
+        info "Material Symbols Rounded already installed"
+    else
+        info "installing Material Symbols Rounded (the icon font the whole shell uses)"
+        run_sh 'set -e; d="$HOME/.local/share/fonts/sekaipop-material-symbols"; mkdir -p "$d"; curl -fL -o "$d/MaterialSymbolsRounded.ttf" "https://github.com/google/material-design-icons/raw/master/variablefont/MaterialSymbolsRounded%5BFILL,GRAD,opsz,wght%5D.ttf"; fc-cache -f' \
+            || fail "Material Symbols Rounded install failed (get it from github.com/google/material-design-icons/tree/master/variablefont)"
+    fi
+    if [ "$CORE_ONLY" = 0 ] && [ "$DESKTOP" = 1 ]; then
+        if have fc-list && fc-list 2>/dev/null | grep -qi "Nerd Font"; then
+            info "a Nerd Font is already installed"
+        else
+            info "installing JetBrainsMono Nerd Font"
+            run_sh 'set -e; d="$HOME/.local/share/fonts/sekaipop-jetbrains-mono-nerd"; mkdir -p "$d"; curl -fL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz" | tar -xJ -C "$d"; fc-cache -f' \
+                || fail "JetBrainsMono Nerd Font install failed (get it from github.com/ryanoasis/nerd-fonts/releases)"
+        fi
     fi
 fi
 
@@ -284,7 +309,9 @@ if have xdg-mime && [ -z "$(xdg-mime query default inode/directory 2>/dev/null)"
 fi
 
 if [ "$SERVICES" = 1 ] && have systemctl; then
-    for u in NetworkManager bluetooth upower power-profiles-daemon; do
+    # Fedora's default is tuned-ppd, which serves the same D-Bus API as power-profiles-daemon
+    ppd=power-profiles-daemon; installed tuned-ppd && ppd=tuned-ppd
+    for u in NetworkManager bluetooth upower "$ppd"; do
         run sudo systemctl enable --now "$u" || fail "could not enable $u"
     done
     if [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ]; then
@@ -293,7 +320,7 @@ if [ "$SERVICES" = 1 ] && have systemctl; then
         warn "no user D-Bus session here: after you log in, run: systemctl --user enable --now pipewire pipewire-pulse wireplumber"
     fi
 elif [ "$SERVICES" = 1 ]; then
-    warn "no systemd: enable NetworkManager, bluetooth, upower, power-profiles-daemon, pipewire, pipewire-pulse, wireplumber with your init system"
+    warn "no systemd: enable NetworkManager, bluetooth, upower, tuned-ppd, pipewire, pipewire-pulse, wireplumber with your init system"
 fi
 
 run sudo usermod -aG video "$USER" || fail "could not add you to the video group"
