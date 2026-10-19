@@ -69,7 +69,7 @@ installed=$(mark commit)
 repo="$SEKAIPOP_REPO"
 [ -n "$repo" ] || repo=$(mark repo)
 [ -n "$repo" ] || repo=$(head -n 1 "$cfgdir/update-repo" 2>/dev/null | tr -d '\r')
-[ -n "$repo" ] || repo=https://github.com/Blapples/SekaiPop.git
+[ -n "$repo" ] || repo=https://github.com/RealOrangeKun/SekaiPop.git
 ref="$SEKAIPOP_REF"
 [ -n "$ref" ] || ref=$(mark ref)
 { [ -n "$ref" ] && [ "$ref" != HEAD ]; } || ref=main
@@ -108,7 +108,7 @@ apply_managed() {
     qt=$(rpm -q --qf '%{VERSION}\n' qt6-qtbase 2>/dev/null | grep -oE '^[0-9]+\.[0-9]+')
     if [ -n "$qt" ] && [ "$(printf '%s\n6.12\n' "$qt" | sort -V | head -n 1)" != 6.12 ] && [ -f "$stage/shaders/compile-shaders.sh" ]; then
         bash "$stage/shaders/compile-shaders.sh" >/dev/null 2>&1 \
-            || { rm -rf "$stage"; echo "the shaders didn't build (needs qt6-shadertools)"; return 1; }
+            || { rm -rf "$stage"; echo "the shaders didn't build (needs qt6-qtshadertools)"; return 1; }
     fi
 
     rm -rf "$old"

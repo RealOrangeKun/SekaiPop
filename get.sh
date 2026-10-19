@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # get.sh: the one-command installer for SekaiPop.
 #
-#   bash <(curl -fsSL https://raw.githubusercontent.com/Blapples/SekaiPop/main/get.sh)
+#   bash <(curl -fsSL https://raw.githubusercontent.com/RealOrangeKun/SekaiPop/main/get.sh)
 #
 # It downloads SekaiPop into a temporary folder, runs install.sh from there (so nobody
 # has to clone, chmod or cd), and cleans up afterwards. Everything after the script is
 # passed on to install.sh, for example:
 #
-#   bash <(curl -fsSL https://raw.githubusercontent.com/Blapples/SekaiPop/main/get.sh) --dry-run
-#   bash <(curl -fsSL https://raw.githubusercontent.com/Blapples/SekaiPop/main/get.sh) --yes --hypr merge
+#   bash <(curl -fsSL https://raw.githubusercontent.com/RealOrangeKun/SekaiPop/main/get.sh) --dry-run
+#   bash <(curl -fsSL https://raw.githubusercontent.com/RealOrangeKun/SekaiPop/main/get.sh) --yes --hypr merge
 #
 # The "curl ... | bash -s -- --dry-run" form works too.
 #
@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-REPO=${SEKAIPOP_REPO:-https://github.com/Blapples/SekaiPop.git}
+REPO=${SEKAIPOP_REPO:-https://github.com/RealOrangeKun/SekaiPop.git}
 REF=${SEKAIPOP_REF:-main}
 KEEP=${SEKAIPOP_DIR:-}
 
@@ -60,7 +60,7 @@ elif have curl && have tar; then
     TAR="${REPO%.git}/archive/${REF}.tar.gz"
     curl -fsSL "$TAR" | tar -xz --strip-components=1 -C "$DIR"
 else
-    die "Need git, or curl and tar. On Arch:  sudo pacman -S git"
+    die "Need git, or curl and tar. On Fedora:  sudo dnf install git"
 fi
 [ -f "$DIR/install.sh" ] || die "The download has no install.sh: wrong SEKAIPOP_REF or SEKAIPOP_REPO?"
 chmod +x "$DIR/install.sh" "$DIR/install-deps.sh" "$DIR/check-deps.sh" 2>/dev/null || true

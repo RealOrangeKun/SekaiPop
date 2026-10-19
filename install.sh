@@ -22,7 +22,7 @@
 #   --restore           put back the Hyprland config that was backed up by the last run
 #   -h, --help
 #
-# Run as your normal user (it uses sudo where needed). Needs Arch / CachyOS / EndeavourOS for the packages.
+# Run as your normal user (it uses sudo where needed). Needs Fedora (dnf) for the packages.
 
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -181,14 +181,14 @@ if [ "$NODEPS" = 0 ]; then
     [ "$HYPR" != merge ] && FLAGS+=(--no-session)    # full/skip handle the session themselves
     SEKAIPOP_FULL_INSTALL=1 bash "$HERE/install-deps.sh" "${FLAGS[@]}" "${DEPS_ARGS[@]}" || fail "install-deps.sh reported problems (see above)"
 
-    if [ "$HYPR" = full ] && have pacman; then
+    if [ "$HYPR" = full ] && have dnf; then
         # used by the keybinds / autostart of the preconfigured config
         EXTRA=()
-        for p in playerctl hypridle; do pacman -T "$p" >/dev/null 2>&1 || EXTRA+=("$p"); done
+        for p in playerctl hypridle; do rpm -q --whatprovides "$p" >/dev/null 2>&1 || EXTRA+=("$p"); done
         if [ "${#EXTRA[@]}" -gt 0 ]; then
             info "for the keybinds and idle lock: ${EXTRA[*]}"
-            PF=(--needed); [ "$YES" = 1 ] && PF+=(--noconfirm)
-            run sudo pacman -S "${PF[@]}" "${EXTRA[@]}" || fail "could not install ${EXTRA[*]}"
+            PF=(); [ "$YES" = 1 ] && PF+=(-y)
+            run sudo dnf install "${PF[@]}" "${EXTRA[@]}" || fail "could not install ${EXTRA[*]}"
         fi
     fi
 else
@@ -225,11 +225,11 @@ if [ "$DRY" != 1 ] && [ -d "$HERE/.git" ] && have git && [ -d "$QS_DEST" ] && [ 
 fi
 
 # shaders: .qsb files are built with Qt 6.12 and older Qt cannot read them
-QTV=$(pacman -Q qt6-base 2>/dev/null | awk '{print $2}' | grep -oE '^[0-9]+\.[0-9]+')
+QTV=$(rpm -q --qf '%{VERSION}\n' qt6-qtbase 2>/dev/null | grep -oE '^[0-9]+\.[0-9]+')
 if [ -n "$QTV" ] && ! ver_ge "$QTV" 6.12; then
     info "Qt $QTV is older than 6.12: rebuilding the shaders once"
     if [ -f "$QS_DEST/shaders/compile-shaders.sh" ]; then
-        run bash "$QS_DEST/shaders/compile-shaders.sh" || fail "shader build failed (needs qt6-shadertools)"
+        run bash "$QS_DEST/shaders/compile-shaders.sh" || fail "shader build failed (needs qt6-qtshadertools)"
     fi
 elif [ -n "$QTV" ]; then
     ok "Qt $QTV: the shipped shaders work as they are"
