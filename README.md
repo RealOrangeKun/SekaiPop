@@ -2,7 +2,7 @@
 
 <h1>SekaiPop</h1>
 
-<img src="docs/highlights.svg" alt="Phone control center, Sekai Pad equalizer, Edit Desktop, shader wallpaper transitions, two lockscreens, installs from a bare Arch" width="82%">
+<img src="docs/highlights.svg" alt="Phone control center, Sekai Pad equalizer, Edit Desktop, shader wallpaper transitions, two lockscreens, installs from a bare Fedora" width="82%">
 
 <br>
 
@@ -100,12 +100,11 @@ Most shells pick one look and theme it. SekaiPop starts from a single design lan
 
 | Need | Notes |
 |---|---|
-| **Arch-based distro** (Arch, CachyOS, EndeavourOS) | The installer uses `pacman` and the AUR |
-| **Hyprland 0.55+** | The config is **Lua** (`hyprland.lua`); older versions can't read it |
-| **Quickshell** | `quickshell` or `quickshell-git` |
-| **Qt 6.7+** | Shaders ship built for Qt 6.12. On older Qt the installer rebuilds them once (needs `qt6-shadertools`) |
+| **Fedora** (this fork; upstream [Blapples/SekaiPop](https://github.com/Blapples/SekaiPop) targets Arch) | The installer uses `dnf` |
+| **Hyprland 0.55+** | The config is **Lua** (`hyprland.lua`); older versions can't read it. The installer enables the [`lionheartp/Hyprland`](https://copr.fedorainfracloud.org/coprs/lionheartp/Hyprland/) COPR for it |
+| **Quickshell** | `quickshell` from the same COPR (an existing Quickshell fork such as `noctalia-qs` is kept) |
+| **Qt 6.7+** | Shaders ship built for Qt 6.12. On older Qt the installer rebuilds them once (needs `qt6-qtshadertools`) |
 | **A normal user with `sudo`** | Don't run the installer as root |
-| **An AUR helper** (`yay` or `paru`) | The installer can build `yay-bin` for you if you have none |
 
 > [!IMPORTANT]
 > GPU drivers are **never** touched by the installer. Install your own (especially NVIDIA) before you start.
@@ -114,7 +113,7 @@ Most shells pick one look and theme it. SekaiPop starts from a single design lan
 <summary><b>Core packages</b> (the shell can't start without these)</summary>
 <br>
 
-`hyprland` `quickshell` `qt6-base` `qt6-declarative` `qt6-multimedia-ffmpeg` `qt6-svg` `qt6-imageformats` `qt6-wayland` `qt6-shadertools` `dbus` `polkit` `mesa` `pipewire` `wireplumber` `pipewire-pulse` `libpulse` `networkmanager` `bluez` `bluez-utils` `upower` `power-profiles-daemon` `libnotify` `wl-clipboard` `jq` `curl` `git` `xdg-utils` `xdg-user-dirs` `fontconfig` `python` `python-numpy` `ttf-material-symbols-variable`
+`hyprland` `quickshell` `qt6-qtbase` `qt6-qtdeclarative` `qt6-qtmultimedia` `qt6-qtsvg` `qt6-qtimageformats` `qt6-qtwayland` `qt6-qtshadertools` `dbus` `polkit` `mesa-dri-drivers` `pipewire` `wireplumber` `pipewire-pulseaudio` `pulseaudio-utils` `NetworkManager` `bluez` `upower` `tuned-ppd` (or `power-profiles-daemon`) `libnotify` `wl-clipboard` `jq` `curl` `git` `xdg-utils` `xdg-user-dirs` `fontconfig` `python3` `python3-numpy`, plus the Material Symbols Rounded font (downloaded by the installer)
 
 </details>
 
@@ -124,14 +123,14 @@ Most shells pick one look and theme it. SekaiPop starts from a single design lan
 
 | For | Packages |
 |---|---|
-| Themes | `matugen` `adw-gtk-theme` `dconf` `glib2` `xorg-xrdb` |
+| Themes | `matugen` `adw-gtk3-theme` `dconf` `glib2` `xrdb` |
 | Music | `cava` `easyeffects` |
-| Screenshots, OCR, recording | `grim` `slurp` `swappy` `tesseract` `tesseract-data-eng` `imagemagick` `wf-recorder` `ffmpeg` `hyprpicker` |
+| Screenshots, OCR, recording | `grim` `slurp` `swappy` `tesseract` `tesseract-langpack-eng` `ImageMagick` `wf-recorder` `ffmpeg-free` `hyprpicker` |
 | Clipboard, emoji, typing | `cliphist` `wtype` |
 | Night light, brightness | `hyprsunset` `brightnessctl` `ddcutil` |
 | Dialogs, terminal | `zenity` `kitty` |
 | Wi-Fi / Bluetooth "Advanced" buttons | `plasma-nm` `kde-cli-tools` `blueman` |
-| Sounds, updates | `libcanberra` `sound-theme-freedesktop` `pacman-contrib` |
+| Sounds | `libcanberra` `sound-theme-freedesktop` |
 | Media keys | `playerctl` |
 
 </details>
@@ -140,7 +139,7 @@ Most shells pick one look and theme it. SekaiPop starts from a single design lan
 <summary><b>Desktop layer</b> (skip with <code>--no-desktop-layer</code> if you already have a desktop)</summary>
 <br>
 
-`xorg-xwayland` `xdg-desktop-portal` `xdg-desktop-portal-hyprland` `xdg-desktop-portal-gtk` `gvfs` `adwaita-icon-theme` `noto-fonts` `noto-fonts-cjk` `noto-fonts-emoji` `ttf-jetbrains-mono-nerd` `gnome-keyring` `libsecret` `pipewire-alsa`, plus a file manager (Dolphin on KDE, Thunar otherwise) and `qt6ct` where nothing else themes Qt.
+`xorg-x11-server-Xwayland` `xdg-desktop-portal` `xdg-desktop-portal-hyprland` `xdg-desktop-portal-gtk` `gvfs` `adwaita-icon-theme` `google-noto-sans-fonts` `google-noto-sans-cjk-fonts` `google-noto-color-emoji-fonts` `gnome-keyring` `libsecret` `pipewire-alsa`, plus JetBrainsMono Nerd Font (downloaded), a file manager (Dolphin on KDE, Thunar otherwise) and `qt6ct` where nothing else themes Qt.
 
 The portals are what make screen sharing work in Discord, browsers and OBS.
 
@@ -150,7 +149,7 @@ The portals are what make screen sharing work in Discord, browsers and OBS.
 <summary><b>Optional</b> (<code>--with-optional</code>)</summary>
 <br>
 
-`python-aubio` `songrec` (song recognition), `mpvpaper` (video wallpapers), `nwg-displays`, `hypridle`, `nodejs` `pnpm` (Vencord plugin build), `cloudflare-warp-bin`
+`aubio-python3`, songrec from Flathub (song recognition), `mpvpaper` (video wallpapers), `hypridle`, `nodejs` `pnpm` (Vencord plugin build). Not packaged for Fedora, install by hand: `nwg-displays` (pipx), `cloudflare-warp` (Cloudflare's repo)
 
 </details>
 
@@ -171,12 +170,12 @@ The portals are what make screen sharing work in Discord, browsers and OBS.
 ### 1. Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Blapples/SekaiPop/main/get.sh | bash
+curl -fsSL https://raw.githubusercontent.com/RealOrangeKun/SekaiPop/main/get.sh | bash
 ```
 
 That is the whole install. It downloads SekaiPop, then does three jobs:
 
-1. **Dependencies:** packages (repos and AUR), Google Sans Flex, services, groups.
+1. **Dependencies:** packages (Fedora repos and the Hyprland COPR), Google Sans Flex / Material Symbols / Nerd fonts, services, groups.
 2. **The shell:** copied to `~/.config/quickshell/sekaipop` (an older copy is kept as `.bak-<time>`).
 3. **Hyprland:** a ready Lua config in `~/.config/hypr` (keybinds, rules, autostart, idle lock) and a `monitors.lua` made for the screens connected right now. Inside a running Hyprland it picks the highest refresh rate your screen offers at its preferred size.
 
@@ -186,7 +185,7 @@ That is the whole install. It downloads SekaiPop, then does three jobs:
 Want to look first? Add `--dry-run`: it prints everything it would do and changes nothing.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Blapples/SekaiPop/main/get.sh) | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/RealOrangeKun/SekaiPop/main/get.sh) | bash -s -- --dry-run
 ```
 
 Options go after the command (see [Installer options](#installer-options)), for example `--yes` or `--hypr merge`.
@@ -195,7 +194,7 @@ Options go after the command (see [Installer options](#installer-options)), for 
 <summary>Prefer to clone it yourself?</summary>
 
 ```bash
-git clone https://github.com/Blapples/SekaiPop.git
+git clone https://github.com/RealOrangeKun/SekaiPop.git
 cd SekaiPop
 ./install.sh --dry-run      # look first
 ./install.sh                # install
@@ -216,7 +215,7 @@ Log out and back in, choosing the plain **Hyprland** session (**not** "uwsm"). T
 ### 3. Check everything
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Blapples/SekaiPop/main/get.sh | bash -s -- --check
+curl -fsSL https://raw.githubusercontent.com/RealOrangeKun/SekaiPop/main/get.sh | bash -s -- --check
 ```
 
 It is read-only: it lists what is installed and what is missing, and changes nothing.
@@ -235,7 +234,7 @@ It is read-only: it lists what is installed and what is missing, and changes not
 | `--restore` | Put back the Hyprland config backed up by the last run |
 | `-- <options>` | Pass options on to `install-deps.sh` |
 
-`install-deps.sh` extras (pass them after `--`): `--core-only`, `--with-optional`, `--no-desktop-layer`, `--gpu amd|intel|nvidia|skip`, `--ddc`, `--file-manager dolphin|thunar|none`, `--no-update`, `--no-aur`.
+`install-deps.sh` extras (pass them after `--`): `--core-only`, `--with-optional`, `--no-desktop-layer`, `--gpu amd|intel|nvidia|skip`, `--ddc`, `--file-manager dolphin|thunar|none`, `--no-update`, `--no-copr`.
 
 ```bash
 ./install.sh --hypr merge                          # I already have a Hyprland config
